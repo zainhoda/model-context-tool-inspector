@@ -147,3 +147,10 @@ button:disabled {
   cursor: not-allowed;
   border: 1px solid #e5e7eb;
 }
+
+pre {
+  white-space: normal;
+}
+tbody.prettify pre {
+  white-space: pre-wrap;
+}

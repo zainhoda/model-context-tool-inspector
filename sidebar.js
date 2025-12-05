@@ -51,7 +51,11 @@ chrome.runtime.onMessage.addListener(({ message, tools, url }) => {
     const row = document.createElement('tr');
     keys.forEach((key) => {
       const td = document.createElement('td');
-      td.textContent = item[key];
+      try {
+        td.innerHTML = `<pre>${JSON.stringify(JSON.parse(item[key]), '', '  ')}</pre>`;
+      } catch (error) {
+        td.textContent = item[key];
+      }
       row.appendChild(td);
     });
     tbody.appendChild(row);
@@ -69,3 +73,7 @@ executeBtn.onclick = async () => {
   const inputArgs = inputArgsText.value;
   chrome.tabs.sendMessage(tab.id, { action: 'EXECUTE_TOOL', name, inputArgs });
 };
+
+tbody.ondblclick = () => {
+  tbody.classList.toggle('prettify');
+}
