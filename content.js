@@ -1,18 +1,18 @@
-chrome.runtime.onMessage.addListener(async ({ action, name, inputArgs }, _, reply) => {
+chrome.runtime.onMessage.addListener(({ action, name, inputArgs }, _, reply) => {
   try {
     if (!navigator.modelContextTesting) {
-      throw new Error('Error: You must run Chrome with the "Experimental Web Platform features" flag enabled.');
+      throw new Error(
+        'Error: You must run Chrome with the "Experimental Web Platform features" flag enabled.'
+      );
     }
     if (action == 'LIST_TOOLS') {
       listTools();
       navigator.modelContextTesting.registerToolsChangedCallback(listTools);
     }
     if (action == 'EXECUTE_TOOL') {
-      try {
-        reply(await navigator.modelContextTesting.executeTool(name, inputArgs));
-      } catch(error) {
-        reply(JSON.stringify(error));
-      }
+      const promise = navigator.modelContextTesting.executeTool(name, inputArgs);
+      promise.then(reply).catch(({ message }) => reply(JSON.stringify(message)));
+      return true;
     }
   } catch ({ message }) {
     chrome.runtime.sendMessage({ message });

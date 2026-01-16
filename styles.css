@@ -9,14 +9,12 @@ h2 {
   margin-top: 0;
   font-size: 18px;
 }
-.desc {
-  font-size: 12px;
-  color: #666;
-  margin-bottom: 15px;
+
+#userPromptText {
+  min-height: 34px;
 }
 
 button {
-  width: 100%;
   padding: 10px;
   background-color: #2563eb;
   color: white;
@@ -28,6 +26,28 @@ button {
 
 button:hover {
   background-color: #1d4ed8;
+}
+
+#copyToClipboard:hover {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+#copyToClipboard {
+  padding: 6px;
+}
+
+#promptResults,
+#toolResults {
+  background: #222;
+  color: #fff;
+  line-height: 2;
+  padding: 0 4px;
+  border-radius: 4px;
+  white-space: pre-line;
+  max-height: 200px;
+  overflow-y: scroll;
+  margin-bottom: 20px;
 }
 
 #status {
@@ -43,6 +63,9 @@ button:hover {
   overflow-x: auto;
   border-radius: 6px;
   border: 1px solid #e5e7eb;
+  overflow-y: scroll;
+  max-height: 400px;
+  display: block;
 }
 
 table {
@@ -79,7 +102,7 @@ tr:nth-child(even) {
 }
 
 .form-group {
-  margin-bottom: 15px;
+  margin-bottom: 10px;
 }
 
 label {
@@ -91,7 +114,7 @@ label {
 }
 
 select,
-textarea {
+textarea, input {
   width: 100%;
   padding: 8px 10px; /* Matches button padding logic */
   border: 1px solid #e5e7eb; /* Matches table border */
@@ -105,7 +128,8 @@ textarea {
 
 /* Focus states matching the button blue */
 select:focus,
-textarea:focus {
+textarea:focus,
+input:focus {
   outline: none;
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
@@ -125,27 +149,38 @@ select {
 
 textarea {
   resize: vertical; /* Allow height resize only */
-  min-height: 80px;
+  min-height: 70px;
   line-height: 1.4;
 }
 
-/* Placeholder text color to match .desc vibe */
+/* Placeholder text color to match vibe */
 ::placeholder {
   color: #a3a3a3;
 }
-
-/* .execute-tool-container {
-  margin-top: 15px;
-} */
 
 /* Disabled state matching the table header gray */
 select:disabled,
 textarea:disabled,
 button:disabled {
-  background-color: #f3f4f6;
-  color: #9ca3af;
+  background-color: #f3f4f6 !important;
+  color: #9ca3af !important;
   cursor: not-allowed;
-  border: 1px solid #e5e7eb;
+  outline: 1px solid #e5e7eb !important;
+  outline-offset: -1px !important;
+}
+
+#resetBtn,
+#apiKeyBtn {
+  color: #2563eb;
+  background-color: unset;
+  outline: 1px solid #2563eb;
+  outline-offset: -1px;
+}
+
+#resetBtn:hover,
+#apiKeyBtn:hover {
+  color: #1d4ed8;
+  outline-color: #1d4ed8;
 }
 
 #toolResults {

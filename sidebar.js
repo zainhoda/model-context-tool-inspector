@@ -1,3 +1,5 @@
+import { GoogleGenAI } from './genai.js';
+
 const statusDiv = document.getElementById('status');
 const tbody = document.getElementById('tableBody');
 const thead = document.getElementById('tableHeaderRow');
@@ -6,8 +8,11 @@ const toolNames = document.getElementById('toolNames');
 const inputArgsText = document.getElementById('inputArgsText');
 const executeBtn = document.getElementById('executeBtn');
 const toolResults = document.getElementById('toolResults');
-
-let currentTools;
+const userPromptText = document.getElementById('userPromptText');
+const promptBtn = document.getElementById('promptBtn');
+const resetBtn = document.getElementById('resetBtn');
+const apiKeyBtn = document.getElementById('apiKeyBtn');
+const promptResults = document.getElementById('promptResults');
 
 // Inject content script first.
 (async () => {
@@ -20,6 +25,8 @@ let currentTools;
     statusDiv.hidden = false;
   }
 })();
+
+let currentTools;
 
 // Listen for the results coming back from content.js
 chrome.runtime.onMessage.addListener(({ message, tools, url }) => {
@@ -77,6 +84,122 @@ chrome.runtime.onMessage.addListener(({ message, tools, url }) => {
   updateDefaultValueForInputArgs();
 });
 
+tbody.ondblclick = () => {
+  tbody.classList.toggle('prettify');
+};
+
+copyToClipboard.onclick = async () => {
+  const text = currentTools
+    .map((tool) => {
+      return `\
+script_tools {
+  name: "${tool.name}"
+  description: "${tool.description}"
+  input_schema: ${JSON.stringify(tool.inputSchema || { type: 'object', properties: {} })}
+}`;
+    })
+    .join('\r\n');
+  await navigator.clipboard.writeText(text);
+};
+
+// Interact with the page
+
+let genAI, chat;
+
+function initGenAI() {
+  genAI = localStorage.apiKey ? new GoogleGenAI({ apiKey: localStorage.apiKey }) : undefined;
+  promptBtn.disabled = !localStorage.apiKey;
+  resetBtn.disabled = !localStorage.apiKey;
+}
+initGenAI();
+
+userPromptText.onkeydown = (event) => {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    promptBtn.click();
+  }
+};
+
+promptBtn.onclick = async () => {
+  try {
+    promptBtn.disabled = true;
+    await promptAI();
+  } catch (error) {
+    logPrompt(`⚠️ Error: "${error}"`);
+  } finally {
+    promptBtn.disabled = false;
+  }
+};
+
+async function promptAI() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+  chat ??= genAI.chats.create({ model: 'gemini-2.5-flash' });
+
+  const message = userPromptText.value;
+  userPromptText.value = '';
+  promptResults.textContent += `User prompt: "${message}"\n`;
+  let currentResult = await chat.sendMessage({
+    message,
+    config: getConfig(),
+  });
+  let finalResponseGiven = false;
+
+  while (!finalResponseGiven) {
+    const response = currentResult;
+    const functionCalls = response.functionCalls || [];
+
+    if (functionCalls.length === 0) {
+      if (!response.text) {
+        logPrompt(`⚠️ AI response has no text: ${JSON.stringify(response.candidates)}\n`);
+      } else {
+        logPrompt(`AI result: ${response.text?.trim()}\n`);
+      }
+      finalResponseGiven = true;
+    } else {
+      const toolResponses = [];
+      for (const { name, args } of functionCalls) {
+        const inputArgs = JSON.stringify(args);
+        logPrompt(`AI calling tool "${name}" with ${inputArgs}`);
+        try {
+          const result = await chrome.tabs.sendMessage(tab.id, {
+            action: 'EXECUTE_TOOL',
+            name,
+            inputArgs,
+          });
+          toolResponses.push({ functionResponse: { name, response: { result } } });
+          logPrompt(`Tool "${name}" result: ${result}`);
+        } catch (e) {
+          logPrompt(`⚠️ Error executing tool "${name}": ${e.message}`);
+          toolResponses.push({
+            functionResponse: { name, response: { error: e.message } },
+          });
+        }
+      }
+
+      // FIXME: New WebMCP tools may not be discovered if there's a navigation.
+      // An articial timeout could be introduced for mitigation but it's not robust.
+
+      currentResult = await chat.sendMessage({
+        message: toolResponses,
+        config: getConfig(),
+      });
+    }
+  }
+}
+
+resetBtn.onclick = () => {
+  chat = undefined;
+  promptResults.textContent = '';
+};
+
+apiKeyBtn.onclick = () => {
+  const apiKey = prompt('Enter Gemini API key');
+  if (apiKey == null) return;
+  localStorage.apiKey = apiKey;
+  initGenAI();
+};
+
 executeBtn.onclick = async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const name = toolNames.selectedOptions[0].value;
@@ -85,27 +208,48 @@ executeBtn.onclick = async () => {
   toolResults.textContent = `${result}\n`;
 };
 
-tbody.ondblclick = () => {
-  tbody.classList.toggle('prettify');
-};
-
-copyToClipboard.onclick = async () => {
-  const text = currentTools.map(tool => {
-    return `\
-script_tools {
-  name: "${tool.name}"
-  description: "${tool.description}"
-  input_schema: ${JSON.stringify(tool.inputSchema || { "type": "object", "properties": {} })}
-}`}).join('\r\n');
-  await navigator.clipboard.writeText(text);
-}
-
 toolNames.onchange = updateDefaultValueForInputArgs;
 
 function updateDefaultValueForInputArgs() {
-  const inputSchema = toolNames.selectedOptions[0].dataset.inputSchema || "{}";
+  const inputSchema = toolNames.selectedOptions[0].dataset.inputSchema || '{}';
   const template = generateTemplateFromSchema(JSON.parse(inputSchema));
   inputArgsText.value = JSON.stringify(template, '', ' ');
+}
+
+// Utils
+
+function logPrompt(text) {
+  promptResults.textContent += `${text}\n`;
+  promptResults.scrollTop = promptResults.scrollHeight;
+}
+
+function getConfig() {
+  const today = new Date();
+  const formattedDate = today.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  const systemInstruction = [
+    'You are an assistant embedded in a browser tab.',
+    'User prompts typically refer to the current tab unless stated otherwise.',
+    'Use your tools to query page content when you need it.',
+    `Today's date is: ${formattedDate}`,
+    'CRITICAL RULE: Whenever the user provides a relative date (e.g., "next Monday", "tomorrow", "in 3 days"),  you must calculate the exact calendar date based on today\'s date.',
+  ];
+
+  const functionDeclarations = currentTools.map((tool) => {
+    return {
+      name: tool.name,
+      description: tool.description,
+      parametersJsonSchema: tool.inputSchema
+        ? JSON.parse(tool.inputSchema)
+        : { type: 'object', properties: {} },
+    };
+  });
+  return { systemInstruction, tools: [{ functionDeclarations }] };
 }
 
 function generateTemplateFromSchema(schema) {

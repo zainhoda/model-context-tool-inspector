@@ -7,11 +7,9 @@
   </head>
   <body>
     <div class="container">
-      <h2>Model Context Tools</h2>
+      <h2>WebMCP Tools</h2>
 
       <div id="status"></div>
-
-      <p class="desc">Tools exposed via <code>navigator.modelContextTesting</code>.</p>
 
       <div class="table-container">
         <table id="resultsTable">
@@ -24,6 +22,19 @@
       </div>
 
       <h2>Interact with the Page</h2>
+
+      <div class="form-group">
+        <label for="userPromptText">User Prompt</label>
+        <textarea id="userPromptText"></textarea>
+      </div>
+
+      <div class="form-group">
+        <button id="promptBtn" disabled>Send</button>
+        <button id="resetBtn" disabled>Reset</button>
+        <button id="apiKeyBtn">Set Gemini API key</button>
+      </div>
+
+      <pre id="promptResults"></pre>
 
       <div class="form-group">
         <label for="toolNames">Tool</label>
@@ -41,6 +52,6 @@
 
       <pre id="toolResults"></pre>
     </div>
-    <script src="sidebar.js"></script>
+    <script type="module" src="sidebar.js"></script>
   </body>
 </html>
