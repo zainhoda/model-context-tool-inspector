@@ -28,6 +28,8 @@ const promptResults = document.getElementById('promptResults');
 
 let currentTools;
 
+let userPromptPendingId = 0;
+
 // Listen for the results coming back from content.js
 chrome.runtime.onMessage.addListener(({ message, tools, url }) => {
   tbody.innerHTML = '';
@@ -82,6 +84,8 @@ chrome.runtime.onMessage.addListener(({ message, tools, url }) => {
     toolNames.appendChild(option);
   });
   updateDefaultValueForInputArgs();
+
+  suggestUserPrompt();
 });
 
 tbody.ondblclick = () => {
@@ -107,11 +111,29 @@ script_tools {
 let genAI, chat;
 
 function initGenAI() {
+  localStorage.model ??= 'gemini-2.5-flash';
   genAI = localStorage.apiKey ? new GoogleGenAI({ apiKey: localStorage.apiKey }) : undefined;
   promptBtn.disabled = !localStorage.apiKey;
   resetBtn.disabled = !localStorage.apiKey;
 }
 initGenAI();
+
+async function suggestUserPrompt() {
+  if (!genAI || userPromptText.value) return;
+  const userPromptId = ++userPromptPendingId;
+  const response = await genAI.models.generateContent({
+    model: localStorage.model,
+    contents: [
+      'Reply with one simple prompt that would trigger one of these tools.',
+      JSON.stringify(currentTools),
+    ],
+  });
+  if (userPromptId !== userPromptPendingId || userPromptText.value) return;
+  for (const chunk of response.text) {
+    await new Promise(r => requestAnimationFrame(r));
+    userPromptText.value += chunk;
+  }
+}
 
 userPromptText.onkeydown = (event) => {
   if (event.key === 'Enter' && !event.shiftKey) {
@@ -134,7 +156,7 @@ promptBtn.onclick = async () => {
 async function promptAI() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
-  chat ??= genAI.chats.create({ model: 'gemini-2.5-flash' });
+  chat ??= genAI.chats.create({ model: localStorage.model });
 
   const message = userPromptText.value;
   userPromptText.value = '';
@@ -190,6 +212,7 @@ async function promptAI() {
 
 resetBtn.onclick = () => {
   chat = undefined;
+  userPromptText.value = '';
   promptResults.textContent = '';
 };
 
