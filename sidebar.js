@@ -1,4 +1,5 @@
 import { GoogleGenAI } from './genai.js';
+import env from './.env.json' with { type: 'json' };
 
 const statusDiv = document.getElementById('status');
 const tbody = document.getElementById('tableBody');
@@ -111,7 +112,8 @@ script_tools {
 let genAI, chat;
 
 function initGenAI() {
-  localStorage.model ??= 'gemini-2.5-flash';
+  localStorage.apiKey ??= env.apiKey;
+  localStorage.model ??= env.model || 'gemini-2.5-flash';
   genAI = localStorage.apiKey ? new GoogleGenAI({ apiKey: localStorage.apiKey }) : undefined;
   promptBtn.disabled = !localStorage.apiKey;
   resetBtn.disabled = !localStorage.apiKey;
@@ -130,7 +132,7 @@ async function suggestUserPrompt() {
   });
   if (userPromptId !== userPromptPendingId || userPromptText.value) return;
   for (const chunk of response.text) {
-    await new Promise(r => requestAnimationFrame(r));
+    await new Promise((r) => requestAnimationFrame(r));
     userPromptText.value += chunk;
   }
 }
