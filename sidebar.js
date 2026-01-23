@@ -135,7 +135,17 @@ async function suggestUserPrompt() {
   const response = await genAI.models.generateContent({
     model: localStorage.model,
     contents: [
-      'Reply with one simple prompt that would trigger one of these tools.',
+      '**Context:**',
+      `Today's date is: ${getFormattedDate()}`,
+      '**Tool Rules:**',
+      '1. **Bank Transaction Filter:** Use **PAST** dates only (e.g., "last month," "December 15th," "yesterday").',
+      '2. **Flight Search:** Use **FUTURE** dates only (e.g., "next week," "February 15th").',
+      '3. **Accommodation Search:** Use **FUTURE** dates only (e.g., "next weekend," "March 15th").',
+      '**Task:**',
+      'Generate one natural user query for a random tool below.',
+      'Ensure the date makes sense relative to today.',
+      'Output the query text only.',
+      '**Tools:**',
       JSON.stringify(currentTools),
     ],
   });
@@ -265,20 +275,22 @@ function logPrompt(text) {
   promptResults.scrollTop = promptResults.scrollHeight;
 }
 
-function getConfig() {
+function getFormattedDate() {
   const today = new Date();
-  const formattedDate = today.toLocaleDateString('en-US', {
+  return today.toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
+}
 
+function getConfig() {
   const systemInstruction = [
     'You are an assistant embedded in a browser tab.',
     'User prompts typically refer to the current tab unless stated otherwise.',
     'Use your tools to query page content when you need it.',
-    `Today's date is: ${formattedDate}`,
+    `Today's date is: ${getFormattedDate()}`,
     'CRITICAL RULE: Whenever the user provides a relative date (e.g., "next Monday", "tomorrow", "in 3 days"),  you must calculate the exact calendar date based on today\'s date.',
   ];
 
