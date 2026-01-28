@@ -4,6 +4,8 @@ const statusDiv = document.getElementById('status');
 const tbody = document.getElementById('tableBody');
 const thead = document.getElementById('tableHeaderRow');
 const copyToClipboard = document.getElementById('copyToClipboard');
+const copyAsScriptToolConfig = document.getElementById('copyAsScriptToolConfig');
+const copyAsJSON = document.getElementById('copyAsJSON');
 const toolNames = document.getElementById('toolNames');
 const inputArgsText = document.getElementById('inputArgsText');
 const executeBtn = document.getElementById('executeBtn');
@@ -98,7 +100,7 @@ tbody.ondblclick = () => {
   tbody.classList.toggle('prettify');
 };
 
-copyToClipboard.onclick = async () => {
+copyAsScriptToolConfig.onclick = async () => {
   const text = currentTools
     .map((tool) => {
       return `\
@@ -110,6 +112,19 @@ script_tools {
     })
     .join('\r\n');
   await navigator.clipboard.writeText(text);
+};
+
+copyAsJSON.onclick = async () => {
+  const tools = currentTools.map((tool) => {
+    return {
+      name: tool.name,
+      description: tool.description,
+      inputSchema: tool.inputSchema
+        ? JSON.parse(tool.inputSchema)
+        : { type: 'object', properties: {} },
+    };
+  });
+  await navigator.clipboard.writeText(JSON.stringify(tools, '', '  '));
 };
 
 // Interact with the page

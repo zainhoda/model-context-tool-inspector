@@ -28,7 +28,7 @@ button:hover {
   background-color: #1d4ed8;
 }
 
-#copyToClipboard:hover {
+#copyToClipboard span:hover {
   text-decoration: underline;
   cursor: pointer;
 }
