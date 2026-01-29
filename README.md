@@ -40,3 +40,9 @@ A Chrome Extension that allows developers to inspect, monitor, and execute tools
     * **Input Arguments:** Enter the arguments for the tool in the text area.
         * *Note:* The input must be valid JSON (e.g., `{"text": "hello world"}`).
     * Click **Execute Tool**.
+
+## Disclaimer
+
+This is not an officially supported Google product. This project is not
+eligible for the [Google Open Source Software Vulnerability Rewards
+Program](https://bughunters.google.com/open-source-security).
