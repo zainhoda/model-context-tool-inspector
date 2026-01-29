@@ -1,3 +1,8 @@
+/**
+ * Copyright 2026 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 console.debug('[WebMCP] Content script injected');
 
 chrome.runtime.onMessage.addListener(({ action, name, inputArgs }, _, reply) => {
