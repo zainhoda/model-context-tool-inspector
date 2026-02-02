@@ -383,7 +383,10 @@ function generateTemplateFromSchema(schema) {
       if (schema.enum && schema.enum.length > 0) {
         return schema.enum[0];
       }
-      if (schema.format === 'date-time' || schema.format === 'date') {
+      if (schema.format === 'date') {
+        return new Date().toISOString().substring(0, 10);
+      }
+      if (schema.format === 'date-time') {
         return new Date().toISOString();
       }
       if (schema.format === 'email') {
