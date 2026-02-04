@@ -60,3 +60,11 @@ function listTools() {
   console.debug(`[WebMCP] Got ${tools.length} tools`, tools);
   chrome.runtime.sendMessage({ tools, url: location.href });
 }
+
+window.addEventListener('toolactivation', ({ toolName }) => {
+  console.debug(`[WebMCP] Tool "${toolName}" starts execution.`);
+});
+
+window.addEventListener('toolcancel', ({ toolName }) => {
+  console.debug(`[WebMCP] Tool "${toolName}" execution is cancelled.`);
+});
