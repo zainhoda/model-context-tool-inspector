@@ -9,7 +9,7 @@ chrome.runtime.onMessage.addListener(({ action, name, inputArgs }, _, reply) => 
   try {
     if (!navigator.modelContextTesting) {
       throw new Error(
-        'Error: You must run Chrome with the "Experimental Web Platform features" flag enabled.',
+        'Error: You must run Chrome with the "Enables WebMCP for Testing" flag enabled.',
       );
     }
     if (action == 'LIST_TOOLS') {
