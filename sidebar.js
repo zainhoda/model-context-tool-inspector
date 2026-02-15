@@ -22,6 +22,27 @@ const resetBtn = document.getElementById('resetBtn');
 const apiKeyBtn = document.getElementById('apiKeyBtn');
 const promptResults = document.getElementById('promptResults');
 
+// User tab elements
+const userChatMessages = document.getElementById('user-chat-messages');
+const userChatInput = document.getElementById('userChatInput');
+const userSendBtn = document.getElementById('userSendBtn');
+const userResetBtn = document.getElementById('userResetBtn');
+
+// Tab switching
+document.querySelectorAll('.tab-button').forEach(button => {
+  button.addEventListener('click', () => {
+    const tabName = button.dataset.tab;
+    
+    // Update tab buttons
+    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+    button.classList.add('active');
+    
+    // Update tab content
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    document.getElementById(`${tabName}-tab`).classList.add('active');
+  });
+});
+
 // Inject content script first.
 (async () => {
   try {
@@ -152,6 +173,8 @@ async function initGenAI() {
   genAI = localStorage.apiKey ? new GoogleGenAI({ apiKey: localStorage.apiKey }) : undefined;
   promptBtn.disabled = !localStorage.apiKey;
   resetBtn.disabled = !localStorage.apiKey;
+  userSendBtn.disabled = !localStorage.apiKey;
+  userResetBtn.disabled = !localStorage.apiKey;
 }
 initGenAI();
 
@@ -477,3 +500,107 @@ document.querySelectorAll('.collapsible-header').forEach((header) => {
     }
   });
 });
+
+// User Chat functionality
+let userChat;
+let userChatTrace = [];
+
+function addChatMessage(role, content, isError = false) {
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `chat-message ${isError ? 'error' : role}`;
+  
+  const roleDiv = document.createElement('div');
+  roleDiv.className = 'chat-message-role';
+  roleDiv.textContent = role === 'user' ? 'You' : role === 'assistant' ? 'Assistant' : 'Tool Call';
+  
+  const contentDiv = document.createElement('div');
+  contentDiv.className = 'chat-message-content';
+  contentDiv.textContent = content;
+  
+  messageDiv.appendChild(roleDiv);
+  messageDiv.appendChild(contentDiv);
+  userChatMessages.appendChild(messageDiv);
+  
+  // Scroll to bottom
+  userChatMessages.scrollTop = userChatMessages.scrollHeight;
+}
+
+userChatInput.onkeydown = (event) => {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    userSendBtn.click();
+  }
+};
+
+userSendBtn.onclick = async () => {
+  const message = userChatInput.value.trim();
+  if (!message) return;
+  
+  userChatInput.value = '';
+  addChatMessage('user', message);
+  
+  try {
+    await sendUserMessage(message);
+  } catch (error) {
+    userChatTrace.push({ error });
+    addChatMessage('assistant', `Error: ${error}`, true);
+  }
+};
+
+async function sendUserMessage(message) {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  
+  userChat ??= genAI.chats.create({ model: localStorage.model });
+  
+  const sendMessageParams = { message, config: getConfig() };
+  userChatTrace.push({ userPrompt: sendMessageParams });
+  let currentResult = await userChat.sendMessage(sendMessageParams);
+  let finalResponseGiven = false;
+  
+  while (!finalResponseGiven) {
+    const response = currentResult;
+    userChatTrace.push({ response });
+    const functionCalls = response.functionCalls || [];
+    
+    if (functionCalls.length === 0) {
+      if (!response.text) {
+        addChatMessage('assistant', 'No response received from AI.', true);
+      } else {
+        addChatMessage('assistant', response.text.trim());
+      }
+      finalResponseGiven = true;
+    } else {
+      const toolResponses = [];
+      for (const { name, args } of functionCalls) {
+        const inputArgs = JSON.stringify(args);
+        addChatMessage('tool', `Calling tool "${name}"...`);
+        
+        try {
+          const result = await chrome.tabs.sendMessage(tab.id, {
+            action: 'EXECUTE_TOOL',
+            name,
+            inputArgs,
+          });
+          toolResponses.push({ functionResponse: { name, response: { result } } });
+          addChatMessage('tool', `Tool "${name}" executed successfully`);
+        } catch (e) {
+          addChatMessage('tool', `Error executing tool "${name}": ${e.message}`, true);
+          toolResponses.push({
+            functionResponse: { name, response: { error: e.message } },
+          });
+        }
+      }
+      
+      const sendMessageParams = { message: toolResponses, config: getConfig() };
+      userChatTrace.push({ userPrompt: sendMessageParams });
+      currentResult = await userChat.sendMessage(sendMessageParams);
+    }
+  }
+}
+
+userResetBtn.onclick = () => {
+  userChat = undefined;
+  userChatTrace = [];
+  userChatMessages.innerHTML = '';
+  userChatInput.value = '';
+};
