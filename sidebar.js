@@ -508,10 +508,19 @@ let userChatTrace = [];
 function addChatMessage(role, content, isError = false) {
   const messageDiv = document.createElement('div');
   messageDiv.className = `chat-message ${isError ? 'error' : role}`;
+  messageDiv.setAttribute('role', 'log');
+  messageDiv.setAttribute('aria-live', 'polite');
   
   const roleDiv = document.createElement('div');
   roleDiv.className = 'chat-message-role';
-  roleDiv.textContent = role === 'user' ? 'You' : role === 'assistant' ? 'Assistant' : 'Tool Call';
+  
+  // Map role to display text
+  const roleDisplayMap = {
+    'user': 'You',
+    'assistant': 'Assistant',
+    'tool': 'Tool Call'
+  };
+  roleDiv.textContent = roleDisplayMap[role] || role;
   
   const contentDiv = document.createElement('div');
   contentDiv.className = 'chat-message-content';
