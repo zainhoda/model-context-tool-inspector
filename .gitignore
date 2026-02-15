@@ -1,2 +1,3 @@
 .env.json
-js-genai.jsnode_modules/
+js-genai.js
+node_modules/
