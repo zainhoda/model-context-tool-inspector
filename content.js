@@ -49,14 +49,14 @@ chrome.runtime.onMessage.addListener(({ action, name, inputArgs }, _, reply) => 
       return true;
     }
   } catch ({ message }) {
-    chrome.runtime.sendMessage({ message });
+    chrome.runtime.sendMessage({ message }).catch(() => {});
   }
 });
 
 function listTools() {
   const tools = navigator.modelContextTesting.listTools();
   console.debug(`[WebMCP] Got ${tools.length} tools`, tools);
-  chrome.runtime.sendMessage({ tools, url: location.href });
+  chrome.runtime.sendMessage({ tools, url: location.href }).catch(() => {});
 }
 
 window.addEventListener('toolactivated', ({ toolName }) => {
