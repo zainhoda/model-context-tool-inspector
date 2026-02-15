@@ -11,6 +11,12 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <div class="tabs">
+      <button class="tab-button active" data-tab="developer">Developer</button>
+      <button class="tab-button" data-tab="user">User</button>
+    </div>
+
+    <div class="tab-content active" id="developer-tab">
     <div class="container">
       <h2 class="collapsible-header">WebMCP Tools</h2>
       <div class="section-content">
@@ -65,6 +71,24 @@
       <pre id="toolResults"></pre>
       </div>
     </div>
+    </div>
+
+    <div class="tab-content" id="user-tab">
+      <div class="container">
+        <div id="user-chat-messages"></div>
+        
+        <div class="form-group">
+          <label for="userChatInput">Your Message</label>
+          <textarea id="userChatInput" placeholder="Type your message here..."></textarea>
+        </div>
+        
+        <div class="form-group">
+          <button id="userSendBtn" disabled>Send</button>
+          <button id="userResetBtn" class="secondary" disabled>Reset Conversation</button>
+        </div>
+      </div>
+    </div>
+
     <script type="module" src="sidebar.js"></script>
   </body>
 </html>
