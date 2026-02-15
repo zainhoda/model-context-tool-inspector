@@ -27,6 +27,39 @@ const userChatMessages = document.getElementById('user-chat-messages');
 const userChatInput = document.getElementById('userChatInput');
 const userSendBtn = document.getElementById('userSendBtn');
 const userResetBtn = document.getElementById('userResetBtn');
+const userChatGreeting = document.getElementById('user-chat-greeting');
+const siteAiStatus = document.getElementById('site-ai-status');
+
+// Update site AI status banner
+function updateSiteAiStatus(tools, url) {
+  if (!siteAiStatus) return;
+  const statusLabel = siteAiStatus.querySelector('.ai-status-label');
+  const statusDetail = siteAiStatus.querySelector('.ai-status-detail');
+
+  if (tools && tools.length > 0) {
+    siteAiStatus.classList.remove('not-optimized');
+    siteAiStatus.classList.add('optimized');
+    statusLabel.textContent = 'AI Optimized';
+    const toolCount = tools.length;
+    statusDetail.textContent = `${toolCount} tool${toolCount !== 1 ? 's' : ''} available on this page`;
+  } else {
+    siteAiStatus.classList.remove('optimized');
+    siteAiStatus.classList.add('not-optimized');
+    statusLabel.textContent = 'Not AI Optimized';
+    try {
+      const hostname = new URL(url).hostname;
+      statusDetail.textContent = `${hostname} has no AI tools`;
+    } catch {
+      statusDetail.textContent = 'This site has no AI tools';
+    }
+  }
+}
+
+// Auto-resize textarea
+userChatInput.addEventListener('input', () => {
+  userChatInput.style.height = 'auto';
+  userChatInput.style.height = Math.min(userChatInput.scrollHeight, 120) + 'px';
+});
 
 // Tab switching
 document.querySelectorAll('.tab-button').forEach(button => {
@@ -76,6 +109,7 @@ chrome.runtime.onMessage.addListener(async ({ message, tools, url }, sender) => 
   const haveNewTools = JSON.stringify(currentTools) !== JSON.stringify(tools);
 
   currentTools = tools;
+  updateSiteAiStatus(tools, url || tab.url);
 
   if (!tools || tools.length === 0) {
     const row = document.createElement('tr');
@@ -506,32 +540,40 @@ let userChat;
 let userChatTrace = [];
 
 function addChatMessage(role, content, isError = false) {
+  // Hide greeting on first message
+  if (userChatGreeting) {
+    userChatGreeting.style.display = 'none';
+  }
+
   const messageDiv = document.createElement('div');
   messageDiv.className = `chat-message ${isError ? 'error' : role}`;
   messageDiv.setAttribute('role', 'log');
   messageDiv.setAttribute('aria-live', 'polite');
-  
+
   const roleDiv = document.createElement('div');
   roleDiv.className = 'chat-message-role';
-  
+
   // Map role to display text
   const roleDisplayMap = {
     'user': 'You',
-    'assistant': 'Assistant',
+    'assistant': 'Gemini',
     'tool': 'Tool Call'
   };
   roleDiv.textContent = roleDisplayMap[role] || role;
-  
+
   const contentDiv = document.createElement('div');
   contentDiv.className = 'chat-message-content';
   contentDiv.textContent = content;
-  
+
   messageDiv.appendChild(roleDiv);
   messageDiv.appendChild(contentDiv);
   userChatMessages.appendChild(messageDiv);
-  
+
   // Scroll to bottom
-  userChatMessages.scrollTop = userChatMessages.scrollHeight;
+  const scrollContainer = userChatMessages.closest('.user-chat-scroll');
+  if (scrollContainer) {
+    scrollContainer.scrollTop = scrollContainer.scrollHeight;
+  }
 }
 
 userChatInput.onkeydown = (event) => {
@@ -612,4 +654,8 @@ userResetBtn.onclick = () => {
   userChatTrace = [];
   userChatMessages.innerHTML = '';
   userChatInput.value = '';
+  userChatInput.style.height = 'auto';
+  if (userChatGreeting) {
+    userChatGreeting.style.display = '';
+  }
 };
